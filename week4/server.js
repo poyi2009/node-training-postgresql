@@ -2,23 +2,24 @@ require("dotenv").config()
 const http = require("http")
 const AppDataSource = require("./db")
 const { write } = require("fs")
+const { errorHandle } = require('./errHandle')
 
-function isDefined(value){
-  return value !== undefined
+function isUndefined(value){
+  return value === undefined
 }
-function isValidString(value){
-  return typeof value ==="string" && value.trim().length > 0 && value !== ""
+function isNotValidSting(value){
+  return typeof value !== "string" || value.trim().length === 0 || value === ""
 }
-function isValidNumber(value){
-  return typeof value ==="number" && value > 0 && value % 1 === 0
+function isNotValidInteger(value){
+  return typeof value !=="number" || value < 0 || value % 1 > 0
 }
 
 const requestListener = async (req, res) => {
   const headers = {
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Content-Length, X-Requested-With',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'PATCH, POST, GET,OPTIONS,DELETE',
-    'Content-Type': 'application/json'
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Content-Length, X-Requested-With",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "PATCH, POST, GET,OPTIONS,DELETE",
+    "Content-Type": "application/json"
   }
   let body = "";
   req.on("data", (chunk) => {
@@ -37,12 +38,7 @@ const requestListener = async (req, res) => {
       }));
       res.end();
     }catch(error){
-      res.writeHead(500, headers);
-      res.write(JSON.stringify({
-        "status":"error",
-        "data":"伺服器錯誤"
-      }));
-      res.end();
+      errorHandle(res, 500, 'error', '伺服器錯誤')
     }
   //新增購買方案
   } else if (req.url === "/api/credit-package" && req.method === "POST") {
@@ -50,96 +46,71 @@ const requestListener = async (req, res) => {
       try{
         const data = JSON.parse(body);
         //確認資料格式
-        if(isDefined(data.name) && isValidString(data.name)
-          && isDefined(data.credit_amount) && isValidNumber(data.credit_amount)
-          && isDefined(data.price)&& isValidNumber(data.price)){
-            //確認資料表裡是否有重複name
-            const existPackage = await AppDataSource.getRepository("CreditPackage").find({
-              where:{
-                name: data.name
-              }
-            })
-            if(existPackage.length === 0){ //資料表沒有重複資料
-              const newPackage = await AppDataSource.getRepository("CreditPackage").create({
-                name:data.name,
-                credit_amount:data.credit_amount,
-                price:data.price
-              });
-              const result = await AppDataSource.getRepository("CreditPackage").save(newPackage);
-              res.writeHead(200, headers);
-              res.write(JSON.stringify({
-                "status":"success",
-                "data":result
-              }));
-              res.end();
-            }else{
-              res.writeHead(409, headers);
-              res.write(JSON.stringify({
-                "status":"failed",
-                "message":"資料重複"
-              }));
-              res.end();
-            }
-          }else{
-            res.writeHead(400, headers);
-            res.write(JSON.stringify({
-              "status":"failed",
-              "message":"欄位未填寫正確"
-            }));
-            res.end();
+        if(isUndefined(data.name) || isNotValidSting(data.name)
+        || isUndefined(data.credit_amount) || isNotValidInteger(data.credit_amount)
+        || isUndefined(data.price) || isNotValidInteger(data.price)){
+            errorHandle(res, 400, 'failed', '欄位未填寫正確');
+            return
           }
-      }catch(error){
-        res.writeHead(500, headers);
+        //確認否有重複name
+        const packageRepo = AppDataSource.getRepository("CreditPackage");
+        const existPackage = await packageRepo.find({
+          where:{
+            name: data.name
+          }
+        })
+        //有重複name
+        if(existPackage.length > 0){ 
+          errorHandle(res, 409, 'failed', '資料重複')
+          return
+        }
+        const newPackage = packageRepo.create({
+          name:data.name,
+          credit_amount:data.credit_amount,
+          price:data.price
+        });
+        const result = await packageRepo.save(newPackage);
+        res.writeHead(200, headers);
         res.write(JSON.stringify({
-          "status":"error",
-          "message":"伺服器錯誤"
+          "status":"success",
+          "data":result
         }));
         res.end();
+      }catch(error){
+        errorHandle(res, 500, 'error', '伺服器錯誤')
       }
     })
   //刪除購買方案
   } else if (req.url.startsWith("/api/credit-package/") && req.method === "DELETE") {
     try{
       const packageId = req.url.split("/").pop();
-      if(isDefined(packageId) && isValidString(packageId)){
-        const existId = await AppDataSource.getRepository("CreditPackage").find({
+      if(isUndefined(packageId) || isNotValidSting(packageId)){
+        errorHandle(res, 400, 'failed', 'ID錯誤')
+        return
+        }
+        //確認是否有此package
+        const packageRepo = AppDataSource.getRepository("CreditPackage");
+        const existId = await packageRepo.find({
           where:{
             id:packageId
           }
-        })
-        if(existId.length > 0){ //資料表有該id資料
-          await AppDataSource.getRepository("CreditPackage").delete(packageId);
-          res.writeHead(200, headers);
-          res.write(JSON.stringify({
-            "status":"success"
-          }));
-          res.end();
-        }else{
-          res.writeHead(400, headers);
-          res.write(JSON.stringify({
-            "status":"failed",
-            "message":"找不到此購買方案"
-          }));
-          res.end();
+        });
+        if(existId.length === 0){
+          errorHandle(res, 400, 'failed', '找不到此購買方案')
+          return
         }
-      }else{
-        res.writeHead(400, headers);
+        //刪除
+        await packageRepo.delete(packageId);
+        res.writeHead(200, headers);
         res.write(JSON.stringify({
-          "status":"failed",
-          "message":"ID錯誤"
+          "status":"success"
         }));
         res.end();
-      }
     }catch(error){
-      res.writeHead(500, headers);
-      res.write(JSON.stringify({
-        "status":"error",
-        "message":"伺服器錯誤"
-      }));
-      res.end();
+      errorHandle(res, 500, 'error', '伺服器錯誤')
     }
   //取得教練專長列表
-  } else if (req.url == "/api/coaches/skill" && req.method == "GET"){
+  } else if (req.url === "/api/coaches/skill" && req.method === "GET"){
     try{
       const skills = await AppDataSource.getRepository("Skill").find({
         select:["id", "name"]
@@ -151,109 +122,73 @@ const requestListener = async (req, res) => {
       }));
       res.end();
     }catch(error){
-      res.writeHead(500, headers);
-      res.write(JSON.stringify({
-        "status":"error",
-        "message":"伺服器錯誤"
-      }));
-      res.end();
+      errorHandle(res, 500, 'error', '伺服器錯誤')
     }
   //新增教練專長
   } else if(req.url == "/api/coaches/skill" && req.method == "POST"){
     req.on("end", async() =>{
       try{
         const data = JSON.parse(body);
-        if(isDefined(data.name) && isValidString(data.name)){
-          const existSkill = await AppDataSource.getRepository("Skill").find({
-            where:{name:data.name}
-          });
-          if(existSkill.length === 0){ //資料庫無重複專長
-            const newSkill = await AppDataSource.getRepository("Skill").create({
-              name:data.name
-            });
-            const result = await AppDataSource.getRepository("Skill").save(newSkill);
-            res.writeHead(200, headers);
-            res.write(JSON.stringify({
-              "status":"success",
-              "data":result
-            }));
-            res.end();
-          }else{
-            res.writeHead(409, headers);
-            res.write(JSON.stringify({
-              "status":"failed",
-              "message":"資料重複"
-            }));
-            res.end();
-          }
-        }else{
-          res.writeHead(400, headers);
-          res.write(JSON.stringify({
-            "status":"failed",
-            "message":"欄位未填寫正確"
-          }));
-          res.end();
+        if(isUndefined(data.name) || isNotValidSting(data.name)){
+          errorHandle(res, 400, 'failed', '欄位未填寫正確')
+          return
         }
-      }catch(error){
-        res.writeHead(500, headers);
+        const skillRepo = AppDataSource.getRepository("Skill");
+        const existSkill = await skillRepo.find({
+          where:{
+            name:data.name
+          }
+        });
+        if(existSkill.length > 0){
+          errorHandle(res, 409, 'failed', '資料重複')
+          return
+        }
+        const newSkill = skillRepo.create({
+          name:data.name
+        });
+        const result = await skillRepo.save(newSkill);
+        res.writeHead(200, headers);
         res.write(JSON.stringify({
-          "status":"error",
-          "message":"伺服器錯誤"
+          "status":"success",
+          "data":result
         }));
         res.end();
+      }catch(error){
+        errorHandle(res, 500, 'error', '伺服器錯誤')
       }
     })
   //刪除教練專長
   } else if (req.url.startsWith("/api/coaches/skill/") && req.method === "DELETE"){
     try{
       const skillId = req.url.split("/").pop();
-      if(isDefined(skillId) && isValidString(skillId)){
-        const existId = await AppDataSource.getRepository("Skill").find({
-          where:{
-            id:skillId
-          }
-        });
-        if(existId.length > 0){
-          await AppDataSource.getRepository("Skill").delete(skillId);
-          res.writeHead(200, headers);
-          res.write(JSON.stringify({
-            "status":"success"
-          }));
-          res.end();
-        }else{
-          res.writeHead(400, headers);
-          res.write(JSON.stringify({
-            "status":"failed",
-            "message":"ID錯誤"
-          }));
-          res.end();
-        }
-      }else{
-        res.writeHead(400, headers);
-        res.write(JSON.stringify({
-          "status":"failed",
-          "message":"ID錯誤"
-        }));
-        res.end();
+      if(isUndefined(skillId) || isNotValidSting(skillId)){
+        errorHandle(res, 400, 'failed', 'ID錯誤')
+        return
       }
-    }catch(error){
-      res.writeHead(500, headers);
+      const skillRepo = AppDataSource.getRepository("Skill");
+      const existId = await skillRepo.find({
+        where:{
+          id:skillId
+        }
+      });
+      if(existId.length === 0){
+        errorHandle(res, 400, 'failed', 'ID錯誤')
+        return
+      }
+      await skillRepo.delete(skillId);
+      res.writeHead(200, headers);
       res.write(JSON.stringify({
-        "status":"error",
-        "message":"伺服器錯誤"
+        "status":"success"
       }));
       res.end();
+    }catch(error){
+      errorHandle(res, 500, 'error', '伺服器錯誤')
     }
   } else if (req.method === "OPTIONS") {
     res.writeHead(200, headers);
     res.end();
   } else {
-    res.writeHead(404, headers)
-    res.write(JSON.stringify({
-      status: "failed",
-      message: "無此網站路由",
-    }))
-    res.end()
+    errorHandle(res, 404, 'failed', '無此網站路由')
   }
 }
 
