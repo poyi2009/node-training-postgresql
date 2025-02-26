@@ -146,9 +146,9 @@ router.post("/coaches/:userId", async(req, res, next) =>{
             errHandle(res, 400, 'failed', '欄位未填寫正確')
             return
         }
-        //檢查大頭貼網址:填入大頭貼且不為字串且非網址且網址結尾不為.png或.jpg
-        if((profileImageUrl && isNotValidSting(profileImageUrl)) &&
-        !profileImageUrl.startsWith('https') && (!profileImageUrl.endWith('.jpg') || !profileImageUrl.endWith('.jpg'))){
+        //檢查大頭貼網址:填入大頭貼 且 不為字串或非網址或網址結尾不為.png或.jpg
+        if(profileImageUrl && (isNotValidSting(profileImageUrl) || !profileImageUrl.startsWith('https') || 
+        !profileImageUrl.endsWith('.jpg'))){
             logger.warn('大頭貼網址錯誤')
             errHandle(res, 400, 'failed', '大頭貼網址錯誤')
             return
@@ -168,7 +168,7 @@ router.post("/coaches/:userId", async(req, res, next) =>{
         }
         //更新使用者role為教練
         const coachRepo = dataSource.getRepository('Coach');
-        const updatedUser = await userRepo.update({ //將此userId使用者的role改為COACH
+        const updatedUser = await userRepo.update({
             id: userId,
             role: 'USER'
         },{
