@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { dataSource } = require('../db/data-source');
 const logger = require('../utils/logger')('Admin');
-const { isUndefined, isNotValidSting, isNotValidInteger } = require('../utils/validUtils')
+const { isUndefined, isNotValidSting, isNotValidInteger, validDate } = require('../utils/validUtils')
 const { errHandle } = require('../utils/errHandle')
 
 //需依路徑排序 有params的排到後面
@@ -17,22 +17,16 @@ router.post("/coaches/courses", async(req, res, next) =>{
             isUndefined(skillId) || isNotValidSting(skillId) ||
             isUndefined(name) || isNotValidSting(name) ||
             isUndefined(description) || isNotValidSting(description) ||
-            isUndefined(startAt) || isNotValidSting(startAt) ||
-            isUndefined(endAt) || isNotValidSting(endAt) ||
+            isUndefined(startAt) || isNotValidSting(startAt) || !validDate(startAt) ||
+            isUndefined(endAt) || isNotValidSting(endAt) || !validDate(endAt) ||
             isUndefined(maxParticipants) || isNotValidInteger(maxParticipants) ||
             isUndefined(meetingUrl) || isNotValidSting(meetingUrl) || !meetingUrl.startsWith('https')) {
             logger.warn('欄位未填寫正確')
             errHandle(res, 400, 'failed', '欄位未填寫正確')
             return
         }
-        //取得User資料表的所有方法
         const userRepo = dataSource.getRepository('User');
-        //findOne需至少搭配一個selection(如where) 查找id為userId資料
-        const existUser = await userRepo.findOne({
-            where:{
-                id: userId
-            }
-        })
+        const existUser = await userRepo.findOneby({ id: userId });
         //確認使用者存在及身分
         if(!existUser){
             logger.warn('使用者不存在')
@@ -55,11 +49,7 @@ router.post("/coaches/courses", async(req, res, next) =>{
             meeting_url: meetingUrl
         })
         const savedCourse = await CourseRepo.save(newCourse);
-        const course = await CourseRepo.findOne({
-            where:{
-                id: savedCourse.id
-            }
-        })
+        const course = await CourseRepo.findOneBy({ id: savedCourse.id });
         logger.info('新增教練課程')
         res.status(201).json({
             status:'success',
@@ -84,8 +74,8 @@ router.put('/coaches/courses/:courseId', async(req, res, next) =>{
             isUndefined(skillId) || isNotValidSting(skillId) ||
             isUndefined(name) || isNotValidSting(name) ||
             isUndefined(description) || isNotValidSting(description) ||
-            isUndefined(startAt) || isNotValidSting(startAt) ||
-            isUndefined(endAt) || isNotValidSting(endAt) ||
+            isUndefined(startAt) || isNotValidSting(startAt) || !validDate(startAt) ||
+            isUndefined(endAt) || isNotValidSting(endAt) || !validDate(endAt) ||
             isUndefined(maxParticipants) || isNotValidInteger(maxParticipants) ||
             isUndefined(meetingUrl) || isNotValidSting(meetingUrl) || !meetingUrl.startsWith('https')
         ){
@@ -94,11 +84,7 @@ router.put('/coaches/courses/:courseId', async(req, res, next) =>{
             return
         }
         const courseRepo = dataSource.getRepository('Course');
-        const existCourse =  await courseRepo.findOne({
-            where:{
-                id: courseId
-            }
-        })
+        const existCourse =  await courseRepo.findOneBy({ id: courseId });
         if(!existCourse){
             errHandle(res, 400, 'failed', '課程不存在')
             return
@@ -120,11 +106,7 @@ router.put('/coaches/courses/:courseId', async(req, res, next) =>{
             errHandle(res, 400, 'failed', '更新課程失敗')
             return
         }
-        const result = await courseRepo.findOne({
-            where:{
-                id:courseId
-            }
-        })
+        const result = await courseRepo.findOneBy({ id:courseId });
         res.status(200).json({
             status: 'success',
             data: {
@@ -187,11 +169,7 @@ router.post("/coaches/:userId", async(req, res, next) =>{
             profile_image_url: profileImageUrl
         });
         const savedCoach = await coachRepo.save(newCoach);
-        const savedUser = await userRepo.findOne({
-            where:{
-                id: userId
-            }
-        });
+        const savedUser = await userRepo.findOne({ id: userId });
         logger.info('更新使用者ID:', userId)
         res.status(201).json({
             status: 'success',

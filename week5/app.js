@@ -35,7 +35,12 @@ app.use('/api/users/signup', userRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/coaches', coachesRouter)
 
-
+app.use((req, res, next) =>{
+  res.status(404).json({
+    status:'failed',
+    message:'無此路由'
+  })
+})
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   req.log.error(err)

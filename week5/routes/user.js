@@ -3,10 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const { dataSource } = require('../db/data-source');
 const logger = require('../utils/logger')('User');
-const { isUndefined, isNotValidSting, validPassword } = require('../utils/validUtils')
+const { isUndefined, isNotValidSting, validPassword, validEmail } = require('../utils/validUtils')
 const { errHandle } = require('../utils/errHandle')
 
-const saltRounds = 10;
 //註冊使用者
 router.post('/', async(req, res, next) =>{
     try{
@@ -24,20 +23,23 @@ router.post('/', async(req, res, next) =>{
             errHandle(res, 400, 'failed', '密碼不符合規則，需要包含英文數字大小寫，最短8個字，最長16個字')
             return
         }
+        //驗證信箱格式
+        if(!validEmail(email)){
+            logger.warn('email不符合規則')
+            errHandle(res, 400, 'failed', 'email不符合規則')
+            return
+        }
         //email是否重複
         const userRepo = dataSource.getRepository('User');
-        const existUser =  await userRepo.findOne({
-            where: {
-                email
-            }
-        });
+        const existUser =  await userRepo.findOneBy({ email });
         if(existUser){
             logger.warn('建立使用者錯誤: Email 已被使用')
             errHandle(res, 409, 'failed', 'Email已被使用')
             return
         }
         //建立新使用者
-        const hashPassword = await bcrypt.hash(password, saltRounds); //加密
+        const saltRounds = process.env.SALT_ROUNDS || 10;
+        const hashPassword = await bcrypt.hash(password, Number(saltRounds));
         const newUser = userRepo.create({
             name,
             email,

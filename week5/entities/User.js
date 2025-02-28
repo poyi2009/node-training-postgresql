@@ -7,7 +7,13 @@ module.exports = new EntitySchema({
         id: {
             primary: true,
             type: 'uuid',
-            generated: 'uuid'
+            generated: 'uuid',
+            foreignKey: {
+                name: 'course_user_id_fkey',
+                columnNames: ['id'],
+                referencedTableName: 'Coach',
+                referencedColumnNames: ['user_id']
+            }
         },
         name: {
             type: 'varchar',

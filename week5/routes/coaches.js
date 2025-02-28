@@ -17,6 +17,11 @@ router.get('/', async(req, res, next) =>{
         }
         per = Number(per);
         page = Number(page);
+        if(per < 0 || page < 0){
+            logger.warn('無此資料')
+            errHandle(res, 400, 'failed', '無此資料')
+            return
+        }
         //取得教練列表
         const coaches = await dataSource.getRepository('Coach').find({
             select: {
@@ -53,11 +58,7 @@ router.get('/:coachId', async(req, res, next) =>{
             return
         }
         const coachRepo = dataSource.getRepository('Coach');
-        const existCoach = await coachRepo.findOne({
-            where:{
-                id: coachId
-            }
-        });
+        const existCoach = await coachRepo.findOneBy({ id: coachId });
         if(!existCoach){
             logger.warn('找不到該教練')
             errHandle(res, 400, 'failed', '找不到該教練')
