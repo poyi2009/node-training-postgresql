@@ -40,6 +40,7 @@ app.use((req, res, next) =>{
     status:'failed',
     message:'無此路由'
   })
+  return
 })
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {

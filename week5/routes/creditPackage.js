@@ -30,11 +30,7 @@ router.post('/', async (req, res, next) => {
             return
         }
         const creditPurchaseRepo = dataSource.getRepository('CreditPackage')
-        const existCreditPurchase = await creditPurchaseRepo.find({
-            where: {
-                name
-            }
-        })
+        const existCreditPurchase = await creditPurchaseRepo.findOneBy({ name });
         if (existCreditPurchase.length > 0) {
             errHandle(res, 409, 'failed', '資料重複')
             return

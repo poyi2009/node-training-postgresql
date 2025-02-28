@@ -5,7 +5,6 @@ const logger = require('../utils/logger')('Admin');
 const { isUndefined, isNotValidSting, isNotValidInteger, validDate } = require('../utils/validUtils')
 const { errHandle } = require('../utils/errHandle')
 
-//需依路徑排序 有params的排到後面
 //新增教練課程
 router.post("/coaches/courses", async(req, res, next) =>{
     try{
