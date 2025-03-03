@@ -84,7 +84,12 @@ router.post('/login', async(req, res, next) =>{
             return
         }
         const userRepo = dataSource.getRepository('User');
-        const existUser = await userRepo.findOne({ email });
+        const existUser = await userRepo.findOne({
+            select:['id', 'name', 'password', 'role'],
+            where:{
+                email
+            }
+        });
         if(!existUser){
             logger.warn('使用者不存在')
             next(appError(400, '使用者不存在'));

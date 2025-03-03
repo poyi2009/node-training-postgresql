@@ -35,7 +35,7 @@ router.post('/', isAuth, async (req, res, next) => {
         }
         const creditPurchaseRepo = dataSource.getRepository('CreditPackage')
         const existCreditPurchase = await creditPurchaseRepo.findOneBy({ name });
-        if (existCreditPurchase.length > 0) {
+        if (existCreditPurchase) {
             logger.warn('資料重複')
             next(appError(409, '資料重複'));
             return

@@ -31,7 +31,7 @@ router.post('/', async(req, res, next) =>{
         }
         const skillRepo = dataSource.getRepository('Skill');
         const existName = await skillRepo.findOneBy({ name });
-        if(existName.length > 0){
+        if(existName){
             logger.warn('資料重複')
             next(appError(409, '資料重複'));
             return
