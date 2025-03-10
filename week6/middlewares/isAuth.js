@@ -15,7 +15,7 @@ const isAuth = async(req, res, next)=>{
             next(appError(401, '請先登入'))
             return
         }
-        const payload = verifyJWT(token);
+        const payload = await verifyJWT(token);
         const existUser = await dataSource.getRepository('User').findOneBy({ id: payload.id });
         if(!existUser){
             next(appError(401, '無效的 token'))

@@ -6,6 +6,7 @@ const { isUndefined, isNotValidSting, isNotValidInteger, validDate } = require('
 const appError = require('../utils/appError');
 const {isAuth} = require('../middlewares/isAuth');
 const isCoach = require('../middlewares/isCoach');
+const {isUUID} = require('validator');
 
 //新增教練課程
 router.post("/coaches/courses", isAuth, isCoach, async(req, res, next) =>{
@@ -14,8 +15,8 @@ router.post("/coaches/courses", isAuth, isCoach, async(req, res, next) =>{
             user_id: userId, skill_id: skillId, name, description, start_at: startAt, end_at: endAt,
             max_participants: maxParticipants, meeting_url: meetingUrl
         } = req.body
-        if (isUndefined(userId) || isNotValidSting(userId) ||
-            isUndefined(skillId) || isNotValidSting(skillId) ||
+        if (isUndefined(userId) || isNotValidSting(userId) || !isUUID(userId) ||
+            isUndefined(skillId) || isNotValidSting(skillId) || !isUUID(skillId) ||
             isUndefined(name) || isNotValidSting(name) ||
             isUndefined(description) || isNotValidSting(description) ||
             isUndefined(startAt) || isNotValidSting(startAt) || !validDate(startAt) ||
@@ -71,8 +72,8 @@ router.put('/coaches/courses/:courseId', isAuth, isCoach, async(req, res, next) 
             skill_id:skillId, name, description, start_at:startAt, end_at:endAt,
             max_participants:maxParticipants, meeting_url:meetingUrl
         } = req.body;
-        if( isNotValidSting(courseId) ||
-            isUndefined(skillId) || isNotValidSting(skillId) ||
+        if( isNotValidSting(courseId) || !isUUID(courseId) ||
+            isUndefined(skillId) || isNotValidSting(skillId) || !isUUID(skillId) ||
             isUndefined(name) || isNotValidSting(name) ||
             isUndefined(description) || isNotValidSting(description) ||
             isUndefined(startAt) || isNotValidSting(startAt) || !validDate(startAt) ||
@@ -127,7 +128,8 @@ router.post("/coaches/:userId", async(req, res, next) =>{
     try{
         const { userId } = req.params;
         const { experience_years: experienceYears, description, profile_image_url: profileImageUrl = null } = req.body;
-        if(isUndefined(experienceYears) || isNotValidInteger(experienceYears) || isUndefined(description) || isNotValidSting(description) || isNotValidSting(profileImageUrl)){
+        if(!isUUID(userId) || isUndefined(experienceYears) || isNotValidInteger(experienceYears) ||
+        isUndefined(description) || isNotValidSting(description) || isNotValidSting(profileImageUrl)){
             logger.warn('欄位未填寫正確')
             next(appError(400, '欄位未填寫正確'));
             return

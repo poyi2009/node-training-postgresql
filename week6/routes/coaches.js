@@ -2,23 +2,24 @@ const express = require('express');
 const router = express.Router();
 const { dataSource } = require('../db/data-source');
 const logger = require('../utils/logger')('Coaches');
-const { isUndefined, isNotValidSting } = require('../utils/validUtils')
+const { isUndefined, isNotValidSting, isNotValidInteger } = require('../utils/validUtils')
 const appError = require('../utils/appError');
+const {isUUID} = require('validator');
 
 //取得教練列表
 router.get('/', async(req, res, next) =>{
     try{
         let {per, page} = req.query; //一頁幾筆,頁碼
-        if(isUndefined(per) || isNotValidSting(per) || isUndefined(page) || isNotValidSting(page)){
+        per = Number(per);
+        page = Number(page);
+        if(isUndefined(per) || isNotValidInteger(per) || isUndefined(page) || isNotValidInteger(page)){
             logger.warn('欄位未填寫正確')
             next(appError(400, '欄位未填寫正確'));
             return
         }
-        per = Number(per);
-        page = Number(page);
         if(per < 0 || page < 0){
             logger.warn('無此頁面')
-            errHandle(res, 400, 'failed', '無此頁面')
+            next(appError(400, '無此頁面'));
             return
         }
         //取得教練列表
@@ -53,7 +54,7 @@ router.get('/', async(req, res, next) =>{
 router.get('/:coachId', async(req, res, next) =>{
     try{
         const { coachId } = req.params;
-        if(isUndefined(coachId) || isNotValidSting(coachId)){
+        if(isUndefined(coachId) || isNotValidSting(coachId) || !isUUID(coachId)){
             logger.warn('欄位未填寫正確')
             next(appError(400, '欄位未填寫正確'));
             return

@@ -6,6 +6,7 @@ const logger = require('../utils/logger')('Course');
 const {isAuth} = require('../middlewares/isAuth');
 const {isUndefined, isNotValidSting} = require('../utils/validUtils');
 const appError = require('../utils/appError');
+const { isUUID } = require('validator');
 //取得課程列表
 router.get('/', async(req, res, next)=>{
     try{
@@ -51,7 +52,7 @@ router.get('/', async(req, res, next)=>{
 router.post('/:courseId', isAuth, async(req, res, next)=>{
     try{
         const {courseId} = req.params;
-        if(isUndefined(courseId) || isNotValidSting(courseId)){
+        if(isUndefined(courseId) || isNotValidSting(courseId) || !isUUID(courseId)){
             logger.warn('欄位未填寫正確')
             next(appError(400, '欄位未填寫正確'))
             return
@@ -129,7 +130,7 @@ router.post('/:courseId', isAuth, async(req, res, next)=>{
 router.delete('/:courseId', isAuth, async(req, res, next)=>{
     try{
         const {courseId} = req.params;
-        if(isUndefined(courseId) || isNotValidSting(courseId)){
+        if(isUndefined(courseId) || isNotValidSting(courseId) || !isUUID(courseId)){
             next(appError(400, '欄位未填寫正確'))
             return
         }

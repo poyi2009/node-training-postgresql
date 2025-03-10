@@ -53,7 +53,7 @@ app.use((err, req, res, next) => {
   err.status = err.status || 'error';
   res.status(err.statusCode).json({
     status: err.status,
-    message: err.message
+    message: '伺服器錯誤'
   })
 })
 
