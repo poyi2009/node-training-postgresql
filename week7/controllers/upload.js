@@ -1,0 +1,58 @@
+const logger = require('../utils/logger')('Upload')
+const formidable = require('formidable')
+const firebaseAdmin = require('firebase-admin')
+const config = require('../config/index')
+const appError = require('../utils/appError')
+
+//firebase環境初始化
+firebaseAdmin.initializeApp({
+    credential: firebaseAdmin.credential.cert(config.get('secret.firebase.serviceAccount')),
+    storageBucket: config.get('secret.firebase.storageBucket')
+})
+const bucket = firebaseAdmin.storage().bucket() //啟動位置
+
+//限制檔案格式設定
+const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const ALLOWED_FILE_TYPES = {
+    'image/jpeg': true,
+    'image/png': true
+}
+
+async function postImage(req, res, next){
+    try {
+        const form = formidable.formidable({
+            multiple: false,
+            maxFileSize: MAX_FILE_SIZE,
+            filter: ({ mimetype }) => {
+                return !!ALLOWED_FILE_TYPES[mimetype]
+            }
+        })
+        const [fields, files] = await form.parse(req)
+        logger.info('files')
+        logger.info(files)
+        logger.info('fields')
+        logger.info(fields)
+        const filePath = files.file[0].filepath;
+        const remoteFilePath = `images/${new Date().toISOString()}-${files.file[0].originalFilename}`
+        await bucket.upload(filePath, { destination: remoteFilePath })
+        const options = {
+            action: 'read',
+            expires: Date.now() + 24 * 60 * 60 * 1000
+        }
+        const [imageUrl] = await bucket.file(remoteFilePath).getSignedUrl(options)
+        logger.info(imageUrl)
+        res.status(200).json({
+            status: 'success',
+            data: {
+                image_url: imageUrl
+            }
+        })
+    } catch (error) {
+        logger.error('上傳檔案錯誤',error)
+        next(error)
+    }
+}
+
+module.exports = {
+    postImage
+}
